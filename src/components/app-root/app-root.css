@@ -107,6 +107,17 @@ ion-content { --background: var(--studio-canvas); }
 .studio-input { --min-height: 50px; --padding-start: 10px; --padding-end: 10px; --background: #fbfdfc; --border-radius: 7px; margin-top: 8px; border: 1px solid var(--studio-line); font-size: 11px; }
 .studio-input.ion-invalid { border-color: #d92d20; background: #fff5f4; }
 .demo-row { display: grid; grid-template-columns: 150px 1fr; gap: 12px; margin-bottom: 3px; }
+.drop-card { border-color: #e5c07b; background: #fffdf6; }
+.drop-card .section-title > span { background: #fbeed3; color: #8e5300; font-size: 13px; }
+.drop-flow { margin-bottom: 4px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.drop-chip { padding: 5px 9px; border: 1px solid var(--studio-line); border-radius: 6px; background: #f2f6f4; font-size: 10px; }
+.drop-chip.from { background: #eaf3f0; }
+.drop-chip.to { border-color: #ecc27f; background: #fff1df; }
+.drop-arrow { color: #8e5300; font-size: 12px; }
+.drop-status { margin-top: 8px; font-size: 10px; }
+.drop-status.ok { color: #27705f; }
+.drop-status.warn { color: #b42318; }
+.drop-card .studio-button { margin-top: 8px; }
 .video-thumbnail {
   min-height: 110px; padding: 11px; display: flex; flex-direction: column; justify-content: flex-end; position: relative;
   overflow: hidden; border-radius: 8px; background: linear-gradient(145deg, #173c35, #356f65); color: #fff;
@@ -127,6 +138,23 @@ ion-content { --background: var(--studio-canvas); }
 .preview-panel { padding: 0 15px 20px; overflow: auto; background: #edf3f1; }
 .preview-head { min-height: 77px; margin: 0 -15px; padding: 13px 15px; display: flex; justify-content: space-between; align-items: center; gap: 10px; border-bottom: 1px solid var(--studio-line); background: #f8fbfa; }
 .studio-segment { max-width: 150px; --background: #dbe7e3; border-radius: 7px; }
+.curve-strip { margin: 14px 2px 0; padding: 10px 12px 12px; border: 1px solid var(--studio-line); border-radius: 10px; background: #fff; }
+.curve-head { display: flex; justify-content: space-between; align-items: baseline; }
+.curve-head small { color: var(--studio-muted); font-size: 9px; }
+.curve-bars { margin-top: 9px; display: flex; align-items: flex-end; gap: 4px; }
+.curve-bar { flex: 1; min-width: 0; padding: 0; border: 0; background: transparent; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 4px; }
+.curve-bar i { width: 100%; border-radius: 4px 4px 2px 2px; background: #a7c8c0; transition: height .2s ease; }
+.curve-bar.rank-2 i { background: #5d9c8f; }
+.curve-bar.rank-3 i { background: #27695e; }
+.curve-bar.active i { outline: 2px solid #153d34; outline-offset: 1px; }
+.curve-bar.drop-open i { background: #d92d20; }
+.curve-bar.drop-explained i { background: #dc9b26; }
+.curve-bar small { color: var(--studio-muted); font-size: 8px; }
+.preview-drop { margin: 10px 2px 0; padding: 9px 11px; border-left: 3px solid #d92d20; border-radius: 6px; background: #fff5f4; }
+.preview-drop.explained { border-left-color: #27705f; background: #effaf6; }
+.preview-drop strong, .preview-drop span { display: block; }
+.preview-drop strong { font-size: 11px; }
+.preview-drop span { margin-top: 3px; color: var(--studio-muted); font-size: 9px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .device-frame { margin: 17px auto 0; border: 1px solid #bac8c4; border-radius: 18px; background: #162925; box-shadow: 0 15px 32px rgba(17,52,45,.14); overflow: hidden; transition: width .25s ease; }
 .device-frame.phone { width: min(100%, 310px); }
 .device-frame.tablet { width: min(100%, 358px); border-radius: 14px; }

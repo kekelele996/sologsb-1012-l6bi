@@ -22,6 +22,8 @@ export interface LessonStep {
   altText: string;
   prerequisiteId: string;
   difficulty: Difficulty;
+  difficultyDropReason?: string;
+  difficultyDropContext?: string;
   cuePoints: number[];
 }
 
@@ -61,6 +63,56 @@ export interface ValidationCheck {
   detail: string;
   stepId?: string;
   moduleId?: string;
+}
+
+export const DIFFICULTY_RANK: Record<Difficulty, number> = { '入门': 1, '进阶': 2, '挑战': 3 };
+
+export interface DifficultyDrop {
+  moduleId: string;
+  moduleTitle: string;
+  stepId: string;
+  stepTitle: string;
+  previousStepId: string;
+  previousStepTitle: string;
+  from: Difficulty;
+  to: Difficulty;
+  reason: string;
+  explained: boolean;
+  stale: boolean;
+}
+
+/** 模块难度曲线签名：学习顺序中的步骤与难度组合，顺序或任一难度变化都会改变签名。 */
+export function difficultyCurveSignature(module: CourseModule): string {
+  return module.steps.map((step) => `${step.id}:${step.difficulty}`).join('|');
+}
+
+/** 按学习顺序比较相邻步骤，找出难度回落（挑战→进阶、进阶→入门等）并核对说明是否仍然有效。 */
+export function findDifficultyDrops(project: CourseProject): DifficultyDrop[] {
+  const drops: DifficultyDrop[] = [];
+  project.modules.forEach((module) => {
+    const signature = difficultyCurveSignature(module);
+    module.steps.forEach((step, index) => {
+      if (index === 0) return;
+      const previous = module.steps[index - 1];
+      if (DIFFICULTY_RANK[step.difficulty] >= DIFFICULTY_RANK[previous.difficulty]) return;
+      const reason = (step.difficultyDropReason ?? '').trim();
+      const explained = Boolean(reason) && (step.difficultyDropContext ?? '') === signature;
+      drops.push({
+        moduleId: module.id,
+        moduleTitle: module.title,
+        stepId: step.id,
+        stepTitle: step.title,
+        previousStepId: previous.id,
+        previousStepTitle: previous.title,
+        from: previous.difficulty,
+        to: step.difficulty,
+        reason,
+        explained,
+        stale: Boolean(reason) && !explained,
+      });
+    });
+  });
+  return drops;
 }
 
 export const STORAGE_KEY = 'sologsb-1012-sign-course-project-v1';
@@ -248,9 +300,49 @@ export function validateProject(project: CourseProject): ValidationCheck[] {
     });
   });
 
+  findDifficultyDrops(project).forEach((drop) => {
+    if (drop.explained) {
+      checks.push({
+        id: `drop-${drop.stepId}`,
+        severity: 'info',
+        title: `${drop.stepTitle} 难度回落已说明`,
+        detail: `难度曲线由${drop.from}回落至${drop.to}，回落原因已随步骤保存。`,
+        stepId: drop.stepId,
+        moduleId: drop.moduleId,
+      });
+    } else {
+      checks.push({
+        id: `drop-${drop.stepId}`,
+        severity: 'error',
+        title: `${drop.stepTitle} 难度回落未说明`,
+        detail: `上一步「${drop.previousStepTitle}」为${drop.from}，本步骤降至${drop.to}，请在步骤编辑中填写回落原因。`,
+        stepId: drop.stepId,
+        moduleId: drop.moduleId,
+      });
+    }
+  });
+
   return checks;
 }
 
 export function cloneProject(project: CourseProject): CourseProject {
   return structuredClone(project);
+}
+
+/** 兼容旧草稿：为缺失的字段补默认值，保证历史 localStorage 数据可以正常打开。 */
+export function normalizeProject(project: CourseProject): CourseProject {
+  const fallback = createDemoProject();
+  return {
+    ...fallback,
+    ...project,
+    modules: (project.modules ?? []).map((module) => ({
+      ...module,
+      steps: (module.steps ?? []).map((step) => ({
+        difficultyDropReason: '',
+        difficultyDropContext: '',
+        ...step,
+      })),
+    })),
+    frozenVersions: project.frozenVersions ?? [],
+  };
 }
