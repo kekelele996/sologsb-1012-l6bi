@@ -2,6 +2,10 @@ import { Component, Host, State, h, Listen } from '@stencil/core';
 import {
   cloneProject,
   createDemoProject,
+  DIFFICULTY_LEVEL,
+  difficultyDropForStep,
+  difficultySignature,
+  moduleDifficultyDrops,
   selectedModule,
   selectedStep,
   STORAGE_KEY,
@@ -161,6 +165,16 @@ export class AppRoot {
         steps: module.steps.map((step) => step.id === stepId ? { ...step, ...patch } : step),
       } : module),
     }), toast);
+  }
+
+  /** 保存回落原因，并记录当前模块难度序列签名；之后调整顺序或改动任一难度都会使说明失效 */
+  private updateDifficultyDropReason(reason: string): void {
+    const module = this.currentModule;
+    if (!module) return;
+    this.updateStep({
+      difficultyDropReason: reason,
+      difficultyDropSignature: difficultySignature(module),
+    });
   }
 
   private updateCurrentModule(patch: Partial<CourseModule>): void {
@@ -342,12 +356,16 @@ export class AppRoot {
   private renderStepListItem(step: LessonStep, index: number) {
     const active = step.id === this.currentStep?.id;
     const issueCount = this.checks.filter((check) => check.stepId === step.id && check.severity !== 'info').length;
+    const drop = difficultyDropForStep(this.currentModule, step.id);
     return (
       <button class={`step-list-item ${active ? 'active' : ''}`} onClick={() => this.selectStep(step.id)}>
         <span class="step-index">{String(index + 1).padStart(2, '0')}</span>
         <span class="step-copy">
           <strong>{step.title}</strong>
-          <small>{step.kind} · {step.duration}s · {step.difficulty}</small>
+          <small>
+            {step.kind} · {step.duration}s · {step.difficulty}
+            {drop && <em class={`drop-mark ${drop.explained ? 'explained' : ''}`} title={`难度回落：${drop.previous.difficulty} → ${drop.step.difficulty}`}>↘ 回落</em>}
+          </small>
         </span>
         {issueCount > 0 && <span class="step-issue-count">{issueCount}</span>}
       </button>
@@ -368,6 +386,7 @@ export class AppRoot {
     }
     const frozen = this.project.status === 'frozen';
     const module = this.currentModule;
+    const drop = difficultyDropForStep(module, step.id);
     const prerequisites = module.steps.filter((candidate, index) => candidate.id !== step.id && index < module.steps.findIndex((item) => item.id === step.id));
     return (
       <div class="step-editor">
@@ -406,6 +425,30 @@ export class AppRoot {
             </ion-select>
             <ion-input disabled={frozen} type="number" min="10" max="600" label="预计时长（秒）" labelPlacement="stacked" class="studio-input" value={String(step.duration)} onIonInput={(event) => this.updateStep({ duration: Number(event.detail.value) || 0 })} />
           </div>
+          {drop && (
+            <div class={`difficulty-drop-callout ${drop.explained ? 'explained' : ''}`}>
+              <div class="drop-summary">
+                <strong>难度回落：{drop.previous.difficulty} → {drop.step.difficulty}</strong>
+                <span class={`drop-status ${drop.explained ? 'ok' : ''}`}>
+                  {drop.explained ? '说明已随步骤保存' : drop.stale ? '顺序或难度已调整，原说明失效' : '提交复核前必须填写回落原因'}
+                </span>
+              </div>
+              <p>上一步「{drop.previous.title}」为{drop.previous.difficulty}，本步骤回落到{drop.step.difficulty}。请说明安排回补练习的原因，说明会跟随本步骤保存；之后调整顺序或改动任一难度都需要重新确认。</p>
+              <ion-textarea
+                disabled={frozen}
+                autoGrow
+                label="回落原因说明（随步骤保存）"
+                labelPlacement="stacked"
+                class={`studio-input ${drop.explained ? '' : 'ion-invalid'}`}
+                placeholder="例如：进阶动作掌握度不足，安排回补练习巩固手形。"
+                value={step.difficultyDropReason ?? ''}
+                onIonInput={(event) => this.updateDifficultyDropReason(event.detail.value ?? '')}
+              />
+              {drop.stale && !frozen && (
+                <ion-button size="small" fill="outline" class="studio-button drop-confirm" onClick={() => this.updateDifficultyDropReason(step.difficultyDropReason ?? '')}>说明仍然适用，重新确认</ion-button>
+              )}
+            </div>
+          )}
         </section>
 
         <section class="form-card">
@@ -507,7 +550,44 @@ export class AppRoot {
             <p class="preview-caption-text">{step.caption}</p>
           </div>
         ) : <div class="empty-preview">选择步骤后显示设备预览。</div>}
+        {this.renderDifficultyCurve()}
       </section>
+    );
+  }
+
+  private renderDifficultyCurve() {
+    const module = this.currentModule;
+    if (!module || module.steps.length === 0) return null;
+    const drops = moduleDifficultyDrops(module);
+    return (
+      <div class="difficulty-curve">
+        <div class="curve-head">
+          <span class="eyebrow">模块难度曲线</span>
+          {drops.length > 0 && <span class="curve-drop-count">{drops.length} 处回落</span>}
+        </div>
+        <div class="curve-track">
+          {module.steps.map((item) => {
+            const drop = drops.find((candidate) => candidate.step.id === item.id);
+            return (
+              <button
+                key={item.id}
+                class={`curve-node level-${DIFFICULTY_LEVEL[item.difficulty]} ${item.id === this.currentStep?.id ? 'current' : ''} ${drop ? (drop.explained ? 'drop-explained' : 'drop-pending') : ''}`}
+                title={`${item.title} · ${item.difficulty}`}
+                onClick={() => this.selectStep(item.id)}
+              >
+                <i />
+                <span>{item.difficulty}</span>
+              </button>
+            );
+          })}
+        </div>
+        {drops.map((drop) => (
+          <button key={drop.step.id} class={`curve-drop-note ${drop.explained ? 'explained' : ''}`} onClick={() => { this.selectStep(drop.step.id); this.activePanel = 'editor'; }}>
+            <strong>回落：{drop.previous.difficulty} → {drop.step.difficulty}</strong>
+            <span>「{drop.previous.title}」→「{drop.step.title}」 · {drop.explained ? '已附回落说明' : '待填写回落原因'}</span>
+          </button>
+        ))}
+      </div>
     );
   }
 

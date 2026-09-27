@@ -23,6 +23,10 @@ export interface LessonStep {
   prerequisiteId: string;
   difficulty: Difficulty;
   cuePoints: number[];
+  /** 难度回落原因说明，跟随步骤保存；旧草稿可能缺失该字段 */
+  difficultyDropReason?: string;
+  /** 保存说明时的模块难度序列签名，顺序或任一难度变化后即失效 */
+  difficultyDropSignature?: string;
 }
 
 export interface CourseModule {
@@ -209,6 +213,55 @@ export function selectedStep(project: CourseProject): LessonStep | undefined {
   return module?.steps.find((step) => step.id === project.selectedStepId) ?? module?.steps[0];
 }
 
+export const DIFFICULTY_LEVEL: Record<Difficulty, number> = { '入门': 0, '进阶': 1, '挑战': 2 };
+
+export interface DifficultyDrop {
+  moduleId: string;
+  /** 回落前的上一步 */
+  previous: LessonStep;
+  /** 回落到的当前步骤，说明保存在该步骤上 */
+  step: LessonStep;
+  index: number;
+  reason: string;
+  /** 已填写说明且签名与当前难度序列一致 */
+  explained: boolean;
+  /** 填写过说明，但顺序或难度已调整，原说明失效 */
+  stale: boolean;
+}
+
+/** 模块难度序列签名：步骤顺序或任一步骤难度变化都会改变它 */
+export function difficultySignature(module: CourseModule): string {
+  return module.steps.map((step) => `${step.id}:${step.difficulty}`).join('>');
+}
+
+/** 按学习顺序比较相邻步骤，找出所有难度回落（如 挑战→进阶、进阶→入门） */
+export function moduleDifficultyDrops(module: CourseModule): DifficultyDrop[] {
+  if (!module) return [];
+  const signature = difficultySignature(module);
+  const drops: DifficultyDrop[] = [];
+  module.steps.forEach((step, index) => {
+    if (index === 0) return;
+    const previous = module.steps[index - 1];
+    if (DIFFICULTY_LEVEL[step.difficulty] >= DIFFICULTY_LEVEL[previous.difficulty]) return;
+    const reason = (step.difficultyDropReason ?? '').trim();
+    const signatureMatches = Boolean(step.difficultyDropSignature) && step.difficultyDropSignature === signature;
+    drops.push({
+      moduleId: module.id,
+      previous,
+      step,
+      index,
+      reason,
+      explained: Boolean(reason) && signatureMatches,
+      stale: Boolean(reason) && !signatureMatches,
+    });
+  });
+  return drops;
+}
+
+export function difficultyDropForStep(module: CourseModule, stepId: string): DifficultyDrop | undefined {
+  return moduleDifficultyDrops(module).find((drop) => drop.step.id === stepId);
+}
+
 export function validateProject(project: CourseProject): ValidationCheck[] {
   const checks: ValidationCheck[] = [];
   if (!project.title.trim()) checks.push({ id: 'title', severity: 'error', title: '课程标题缺失', detail: '发布前需要为课程填写清晰标题。' });
@@ -244,6 +297,37 @@ export function validateProject(project: CourseProject): ValidationCheck[] {
       }
       if (step.commonMistakes.filter(Boolean).length === 0) {
         checks.push({ id: `mistakes-${step.id}`, severity: 'info', title: `${step.title} 尚未记录常见错误`, detail: '补充常见错误有助于教师现场提示。', stepId: step.id, moduleId: module.id });
+      }
+    });
+
+    moduleDifficultyDrops(module).forEach((drop) => {
+      if (drop.explained) {
+        checks.push({
+          id: `difficulty-drop-${drop.step.id}`,
+          severity: 'info',
+          title: `「${drop.step.title}」难度回落已说明`,
+          detail: `难度曲线从「${drop.previous.title}」的${drop.previous.difficulty}回落到${drop.step.difficulty}，回落原因：${drop.reason}`,
+          stepId: drop.step.id,
+          moduleId: module.id,
+        });
+      } else if (drop.stale) {
+        checks.push({
+          id: `difficulty-drop-${drop.step.id}`,
+          severity: 'error',
+          title: `「${drop.step.title}」的回落说明已失效`,
+          detail: `步骤顺序或难度已调整，当前回落为${drop.previous.difficulty} → ${drop.step.difficulty}，原说明不再适用。请在步骤编辑中重新确认回落原因。`,
+          stepId: drop.step.id,
+          moduleId: module.id,
+        });
+      } else {
+        checks.push({
+          id: `difficulty-drop-${drop.step.id}`,
+          severity: 'error',
+          title: `「${drop.step.title}」难度回落缺少说明`,
+          detail: `难度曲线从「${drop.previous.title}」的${drop.previous.difficulty}回落到本步骤的${drop.step.difficulty}。请在步骤编辑中填写回落原因，否则无法提交复核或冻结。`,
+          stepId: drop.step.id,
+          moduleId: module.id,
+        });
       }
     });
   });

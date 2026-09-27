@@ -77,6 +77,8 @@ ion-content { --background: var(--studio-canvas); }
 .step-copy strong { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11px; }
 .step-copy small { display: block; margin-top: 3px; color: var(--studio-muted); font-size: 9px; }
 .step-issue-count { min-width: 20px; height: 20px; padding: 0 5px; display: grid; place-items: center; border-radius: 10px; background: #fff1df; color: #8e5300; font-size: 9px; }
+.drop-mark { margin-left: 5px; padding: 1px 5px; border-radius: 7px; background: #ffe4c2; color: #8e5300; font-size: 8px; font-style: normal; white-space: nowrap; }
+.drop-mark.explained { background: #d7f0e5; color: #1f6f52; }
 .module-editor { padding: 12px; border-top: 1px solid var(--studio-line); background: #f1f6f4; display: flex; flex-direction: column; gap: 8px; }
 .module-editor .studio-input { --min-height: 42px; font-size: 11px; }
 
@@ -123,6 +125,17 @@ ion-content { --background: var(--studio-canvas); }
 .empty-glyph { width: 66px; height: 66px; display: grid; place-items: center; margin-bottom: 14px; border-radius: 50%; background: #dff0eb; color: #1f6f62; font: 700 24px/1 Georgia, serif; }
 .empty-editor h2 { margin: 0; color: var(--studio-ink); font-size: 17px; }
 .empty-editor p { max-width: 340px; font-size: 11px; line-height: 1.55; }
+
+.difficulty-drop-callout { margin-top: 12px; padding: 12px; border: 1px solid #f0c48c; border-left: 4px solid #dc9b26; border-radius: 8px; background: #fffaf1; }
+.difficulty-drop-callout.explained { border-color: #9fd3c2; border-left-color: #2c8a6c; background: #f2faf7; }
+.drop-summary { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.drop-summary strong { font-size: 12px; }
+.drop-status { padding: 3px 8px; border-radius: 9px; background: #ffe4c2; color: #8e5300; font-size: 9px; }
+.drop-status.ok { background: #d7f0e5; color: #1f6f52; }
+.difficulty-drop-callout p { margin: 8px 0 0; color: #7a5a22; font-size: 10px; line-height: 1.5; }
+.difficulty-drop-callout.explained p { color: #4b6f62; }
+.difficulty-drop-callout .studio-input { margin-top: 10px; }
+.drop-confirm { margin-top: 8px; font-size: 10px; }
 
 .preview-panel { padding: 0 15px 20px; overflow: auto; background: #edf3f1; }
 .preview-head { min-height: 77px; margin: 0 -15px; padding: 13px 15px; display: flex; justify-content: space-between; align-items: center; gap: 10px; border-bottom: 1px solid var(--studio-line); background: #f8fbfa; }
@@ -175,6 +188,26 @@ ion-content { --background: var(--studio-canvas); }
 .preview-meta span { margin-top: 2px; color: #9fc0b7; font-size: 8px; }
 .preview-caption-text { margin: 0; padding: 11px 12px; border-top: 1px solid #3a5650; background: #203b35; color: #d9ebe6; font-size: 10px; line-height: 1.5; }
 .empty-preview { height: 300px; display: grid; place-items: center; color: var(--studio-muted); font-size: 11px; }
+
+.difficulty-curve { margin: 14px auto 0; width: min(100%, 358px); padding: 12px; border: 1px solid #c3d2cd; border-radius: 12px; background: #f8fbfa; }
+.curve-head { display: flex; align-items: center; justify-content: space-between; min-height: 16px; }
+.curve-drop-count { padding: 2px 7px; border-radius: 9px; background: #fff1df; color: #8e5300; font-size: 9px; }
+.curve-track { margin-top: 10px; display: flex; align-items: flex-end; gap: 6px; }
+.curve-node { flex: 1; min-width: 0; padding: 0; display: flex; flex-direction: column; align-items: center; gap: 4px; border: 0; background: transparent; cursor: pointer; }
+.curve-node i { width: 100%; border-radius: 4px 4px 2px 2px; background: #9fb8b1; transition: height .2s ease; }
+.curve-node.level-0 i { height: 10px; }
+.curve-node.level-1 i { height: 18px; }
+.curve-node.level-2 i { height: 26px; }
+.curve-node.current i { background: #167064; box-shadow: 0 0 0 2px rgba(22,112,100,.2); }
+.curve-node.drop-pending i { background: #dc9b26; }
+.curve-node.drop-explained i { background: #4aa58a; }
+.curve-node span { max-width: 100%; overflow: hidden; color: var(--studio-muted); font-size: 8px; text-overflow: ellipsis; white-space: nowrap; }
+.curve-node.current span { color: #155f55; font-weight: 700; }
+.curve-drop-note { width: 100%; margin: 8px 0 0; padding: 7px 9px; display: block; border: 1px solid #f0c48c; border-radius: 7px; background: #fffaf1; text-align: left; cursor: pointer; font-size: 10px; }
+.curve-drop-note strong { color: #8e5300; font-size: 10px; }
+.curve-drop-note span { display: block; margin-top: 2px; color: var(--studio-muted); font-size: 9px; }
+.curve-drop-note.explained { border-color: #9fd3c2; background: #f2faf7; }
+.curve-drop-note.explained strong { color: #1f6f52; }
 
 .checks-panel { padding: 16px; }
 .checks-summary { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 14px; }
